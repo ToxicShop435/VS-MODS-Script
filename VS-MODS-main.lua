@@ -1,126 +1,44 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local player = Players.LocalPlayer
-local backpack = player:WaitForChild("Backpack")
-
-local itemsFolder = ReplicatedStorage:FindFirstChild("Items")
-
+local UserInputService = game:GetService("UserInputService")
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
-local window = library.CreateLib("VS MODS TEST - Steal A Brainrot", "DarkTheme")
+local window = library.CreateLib("Auto Clicker", "DarkTheme")
 local tab = window:NewTab("Main")
 local section = tab:NewSection("Main")
 
--- Bouton Give All Items
-section:NewButton("Give All Items (Client Sidded cool to fake live)", "Clone tout le contenu de ReplicatedStorage.Items dans ton Backpack", function()
-    if not itemsFolder then
-        game.StarterGui:SetCore("SendNotification", {
-            Title = "Erreur",
-            Text = "Le dossier Items n'existe pas dans ReplicatedStorage",
-            Duration = 4,
-        })
-        return
-    end
+local autoClickActive = false
+local clicking = false
 
-    local count = 0
-    for _, item in ipairs(itemsFolder:GetChildren()) do
-        if item:IsA("Tool") then
-            local clone = item:Clone()
-            clone.Parent = backpack
-            count += 1
-        end
-    end
+local mouse = game.Players.LocalPlayer:GetMouse()
+local clickConnection
+local inputConnection
 
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "Items clonés",
-        Text = "Ajouté " .. tostring(count) .. " items dans ton Backpack",
-        Duration = 4,
-    })
-end)
+section:NewButton("Auto Click", "Active/Désactive l'auto click", function()
+    autoClickActive = not autoClickActive
+    if autoClickActive then
+        print("Auto Click activé. Presse J pour spam, K pour stop.")
 
--- Bouton Give Cash (client-sided visual only)
-section:NewButton("Give Cash (Visual only)", "Met ton Cash à 'infinite' localement", function()
-    local leaderstats = player:FindFirstChild("leaderstats")
-    if not leaderstats then
-        game.StarterGui:SetCore("SendNotification", {
-            Title = "Erreur",
-            Text = "Pas de leaderstats trouvé",
-            Duration = 4,
-        })
-        return
-    end
+        inputConnection = UserInputService.InputBegan:Connect(function(input, gameProcessed)
+            if gameProcessed then return end
+            if not autoClickActive then return end
 
-    local cash = leaderstats:FindFirstChild("Cash")
-    if not cash then
-        game.StarterGui:SetCore("SendNotification", {
-            Title = "Erreur",
-            Text = "Pas de Cash trouvé dans leaderstats",
-            Duration = 4,
-        })
-        return
-    end
-
-    cash.Value = 1e9
-
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "1B added on the leaderbord",
-        Text = "Ton Cash est maintenant 'infinite' localement !",
-        Duration = 4,
-    })
-end)
-
--- Bouton No Laser (client-sided)
-section:NewButton("No Laser", "Supprime tous les lasers dans workspace.Plots", function()
-    local plotsFolder = workspace:FindFirstChild("Plots")
-    if not plotsFolder then
-        game.StarterGui:SetCore("SendNotification", {
-            Title = "Erreur",
-            Text = "Pas de dossier Plots trouvé dans Workspace",
-            Duration = 4,
-        })
-        return
-    end
-
-    local count = 0
-    for _, obj in ipairs(plotsFolder:GetDescendants()) do
-        if obj.Name:lower():find("laser") then
-            obj:Destroy()
-            count += 1
-        end
-    end
-
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "No Laser",
-        Text = "Supprimé " .. tostring(count) .. " lasers",
-        Duration = 4,
-    })
-end)
-
--- Bouton No Base Wall (client-sided)
-section:NewButton("No Base Wall", "Supprime toutes les décorations dans workspace.Plots", function()
-    local plotsFolder = workspace:FindFirstChild("Plots")
-    if not plotsFolder then
-        game.StarterGui:SetCore("SendNotification", {
-            Title = "Erreur",
-            Text = "Pas de dossier Plots trouvé dans Workspace",
-            Duration = 4,
-        })
-        return
-    end
-
-    local count = 0
-    for _, base in ipairs(plotsFolder:GetChildren()) do
-        local decorations = base:FindFirstChild("Decorations")
-        if decorations then
-            for _, obj in ipairs(decorations:GetChildren()) do
-                obj:Destroy()
-                count += 1
+            if input.KeyCode == Enum.KeyCode.J and not clicking then
+                clicking = true
+                -- Lance la boucle de clic rapide dans un thread séparé
+                spawn(function()
+                    while clicking do
+                        mouse1click()
+                        task.wait(0.001) -- 1000 clics par seconde théoriquement
+                    end
+                end)
+            elseif input.KeyCode == Enum.KeyCode.K and clicking then
+                clicking = false
             end
+        end)
+    else
+        clicking = false
+        if inputConnection then
+            inputConnection:Disconnect()
+            inputConnection = nil
         end
+        print("Auto Click désactivé.")
     end
-
-    game.StarterGui:SetCore("SendNotification", {
-        Title = "No Base Wall",
-        Text = "Supprimé " .. tostring(count) .. " décorations",
-        Duration = 4,
-    })
 end)
